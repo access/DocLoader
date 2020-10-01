@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DocLoader"
         mc:Ignorable="d"
-        Title="Parser Document Loader" Height="799" Width="1204" ResizeMode="CanResize" WindowStartupLocation="CenterScreen">
+        Title="Parser Document Loader" Height="698" Width="1053" ResizeMode="CanResize" WindowStartupLocation="CenterScreen">
     <Grid Margin="0,10,0,3" DockPanel.Dock="Top" Height="Auto" 
   AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" Background="Transparent">
         <Grid.ColumnDefinitions>
@@ -14,12 +14,12 @@
             <ColumnDefinition Width="105*"/>
             <ColumnDefinition Width="604*"/>
         </Grid.ColumnDefinitions>
-        <Button Content="Browse a file" HorizontalAlignment="Left" Height="48" Margin="310,12,0,0" 
-                VerticalAlignment="Top" Width="{Binding ElementName=data_list,Path=ActualWidth}" Click="Button_Click" Grid.Column="3"/>
-        <ListBox x:Name="log_list" Margin="10,624,10,10" Grid.ColumnSpan="4"/>
-        <ListBox x:Name="data_list" Margin="310,65,10,130" Grid.Column="3" />
-        <DataGrid x:Name="data_table" Margin="10,12,0,0" Height="607" Width="887" HorizontalAlignment="Left" VerticalAlignment="Top" RowHeight="30" ColumnWidth="100"  Grid.ColumnSpan="4"/>
-        <ProgressBar x:Name="progressLoad" Margin="10,-41,10,720" Visibility="Visible" Height="5" Grid.ColumnSpan="4"/>
+        <Button Content="Browse a file" Height="48" Margin="0,20,10,0" 
+                VerticalAlignment="Top" Width="{Binding ElementName=data_list,Path=ActualWidth}" Click="Button_Click" Grid.Column="3" HorizontalAlignment="Right"/>
+        <ListBox x:Name="log_list" Margin="10,549,10,10" Grid.ColumnSpan="4"/>
+        <ListBox x:Name="data_list" Margin="0,73,10,0" Grid.Column="3" HorizontalAlignment="Right" Width="250" Height="471" VerticalAlignment="Top" />
+        <DataGrid x:Name="data_table" Margin="10,20,265,0" Height="524" VerticalAlignment="Top" RowHeight="30" ColumnWidth="100"  Grid.ColumnSpan="4"/>
+        <ProgressBar x:Name="progressLoad" Margin="10,10,10,0" Visibility="Visible" Height="5" Grid.ColumnSpan="4" VerticalAlignment="Top"/>
         <!--<Image HorizontalAlignment="Left" Height="160" Margin="10,10,0,0" VerticalAlignment="Top" Width="290" Source="/drag_and_drop.gif"/>-->
 
     </Grid>
