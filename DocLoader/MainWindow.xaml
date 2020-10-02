@@ -18,7 +18,7 @@
                 VerticalAlignment="Top" Width="{Binding ElementName=data_list,Path=ActualWidth}" Click="Button_Click" Grid.Column="3" HorizontalAlignment="Right"/>
         <ListBox x:Name="log_list" Margin="10,549,10,10" Grid.ColumnSpan="4"/>
         <ListBox x:Name="data_list" Margin="0,73,10,0" Grid.Column="3" HorizontalAlignment="Right" Width="250" Height="471" VerticalAlignment="Top" />
-        <DataGrid x:Name="data_table" Margin="10,20,265,0" Height="524" VerticalAlignment="Top" RowHeight="30" ColumnWidth="100"  Grid.ColumnSpan="4"/>
+        <DataGrid x:Name="data_table" Margin="10,20,265,0" Height="524" VerticalAlignment="Top" RowHeight="30" ColumnWidth="*"  Grid.ColumnSpan="4"/>
         <ProgressBar x:Name="progressLoad" Margin="10,10,10,0" Visibility="Visible" Height="5" Grid.ColumnSpan="4" VerticalAlignment="Top"/>
         <!--<Image HorizontalAlignment="Left" Height="160" Margin="10,10,0,0" VerticalAlignment="Top" Width="290" Source="/drag_and_drop.gif"/>-->
 
