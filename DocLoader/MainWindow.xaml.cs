@@ -8,47 +8,91 @@ using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Data;
 using RequestRecognitionToolLib.Main;
+/// ==========================================
+///  Title:     Recognizer for patterns from PDF, Image, Excel, etc. file types;
+///  Author:    Jevgeni Kostenko
+///  Copyright: Baltic Bolt OÜ
+///  Date:      21.09.2020
+/// ==========================================
+
 using RequestRecognitionToolLib.Main.classes;
+using RequestRecognitionToolLib.Main.Interfaces;
 using System.Collections.ObjectModel;
 using OfficeOpenXml.FormulaParsing.Excel.Functions.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Animation;
+using System.Text.RegularExpressions;
+using System.IO;
 
 namespace DocLoader
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    /// 
-
     using Recognizer = RequestRecognitionToolLib.Main.classes;
+
     public partial class MainWindow : Window
     {
-        Parser parser;
+        Parser _parser;
         DataFile dfile;
+        string lastFilePath = "";
+        string _cmdInputFile = string.Empty;
+        string _cmdOutputFile = string.Empty;
+        string _cmdoutputJSON = string.Empty;
+
         ParserConfig parserConfig = new ParserConfig()
         {
-            Language = "eng+rus+est",
+            Language = "est+rus+eng",
             TesseractExecuteDir = @"D:\Program Files\Tesseract-OCR",
             TessDataDir = @"D:\Program Files\Tesseract-OCR\tessdata",
             NativeLibraryDirectory = @"D:\source\repos\ParserTool\RequestRecognitionToolLib\RequestRecognitionToolLib\bin\x64\Debug\netcoreapp3.1\runtimes\win-x64\native",
-            GhostscriptDirectory = @"D:\Program Files\gs\gs9.53.2\bin"
+            GhostscriptDirectory = @"D:\Program Files\gs\gs9.53.2\bin",
+            BlackListDictionaryPath = @"D:\source\repos\ParserTool\RequestRecognitionToolLib\RequestRecognitionToolLib\bin\Debug\netcoreapp3.1\blackListDictionary.json"
         };
+
         public MainWindow()
         {
-            InitializeComponent();
-            progressLoad.Visibility = Visibility.Hidden;
-            parser = new Parser();
-            log("assembly loaded: " + parser.getAssemblyName());
+            string[] args = Environment.GetCommandLineArgs();
+            //--------------- comand line check mode ----------------------------
+            if (args.Length > 1)
+            {
+                InitializeComponent();
+                mainWin.Visibility = Visibility.Hidden;
+                progressLoad.Visibility = Visibility.Hidden;
+
+                //------------------ checking arguments -------------------------
+                for (int i = 0; i < args.Length; i++)
+                {
+                    if (args[i].ToUpper() == "-I" || args[i].ToUpper() == "/I" || args[i].ToUpper() == "-INPUTFILE" || args[i].ToUpper() == "--INPUTFILE" || args[i].ToUpper() == "/INPUTFILE")
+                        try { _cmdInputFile = args[i + 1]; } catch (Exception) { }
+                    if (args[i].ToUpper() == "-O" || args[i].ToUpper() == "/O" || args[i].ToUpper() == "-OUTPUTFILE" || args[i].ToUpper() == "--OUTPUTFILE" || args[i].ToUpper() == "/OUTPUTFILE")
+                        try { _cmdOutputFile = args[i + 1]; } catch (Exception) { }
+                }
+                if (String.IsNullOrEmpty(_cmdInputFile) || String.IsNullOrEmpty(_cmdOutputFile)) Application.Current.Shutdown();
+                //------------------ checking OK ---------------------------------
+                GenerateDocumentJSON();
+            }
+            //--------------------------------------------------------------------
+            else
+            {
+                InitializeComponent();
+                progressLoad.Visibility = Visibility.Hidden;
+            }
         }
 
-        private void drawAnalyseTable(List<Recognizer.Page> pages)
+        private async void GenerateDocumentJSON()
+        {
+            _parser = new Parser(dfile = new DataFile(_cmdInputFile), parserConfig);
+            await _parser.GenerateDocumentAsync();
+            _cmdoutputJSON = _parser.DocumentJSON;
+            try { File.WriteAllText(_cmdOutputFile, _cmdoutputJSON); } catch (Exception) { }
+            Application.Current.Shutdown();
+        }
+
+        private void drawAnalyseTable(IDocument doc)
         {
             data_table.Items.Clear();
             data_table.Columns.Clear();
 
             DataGridTextColumn textColumn = new DataGridTextColumn();
-            foreach (var page in pages)
+            foreach (Recognizer.Page page in doc)
             {
                 List<string[]> prows = page.PageRows;
                 for (int i = 0; i < page.MaxColumnsCount; i++)
@@ -75,20 +119,22 @@ namespace DocLoader
             Nullable<bool> result = openFileDlg.ShowDialog();
             if (result == true)
             {
+                btn_reloadFile.IsEnabled = true;
                 string fname = openFileDlg.FileName;
-                var task = Task.Factory.StartNew(() => parser = new Parser(dfile = new DataFile(fname), parserConfig));
+                lastFilePath = fname;
+                _parser = new Parser(dfile = new DataFile(fname), parserConfig);
+                await _parser.GenerateDocumentAsync();
+                _parser.GetFilterBlackListWords().ForEach(el => data_list.Items.Add(el));
 
-                await task;
                 progressLoad.IsIndeterminate = false;
                 progressLoad.Value = 100;
                 if (!dfile.HasLoadError)
                 {
                     log("file: " + dfile.fileInfo.Name + " size: " + dfile.fileInfo.Length + " bytes");
-                    parser.getAllElements().ForEach(e => data_list.Items.Add(new ListBoxItem().Content = e));
                 }
                 else
                     log("error: " + dfile.LastErrorMsg);
-                parser = null;
+                drawAnalyseTable(_parser.GetCleanDocument());
             }
 
         }
@@ -101,24 +147,25 @@ namespace DocLoader
             data_list.Items.Clear();
             if (null != e.Data && e.Data.GetDataPresent(DataFormats.FileDrop))
             {
+                btn_reloadFile.IsEnabled = true;
                 string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-                foreach (var i in files)
+                foreach (var file in files)
                 {
-                    var task = Task.Factory.StartNew(() => parser = new Parser(dfile = new DataFile(i), parserConfig));
+                    _parser = new Parser(dfile = new DataFile(file), parserConfig);
+                    lastFilePath = file;
+                    await _parser.GenerateDocumentAsync();
+                    _parser.GetFilterBlackListWords().ForEach(el => data_list.Items.Add(el));
 
-                    await task;
                     progressLoad.IsIndeterminate = false;
-                progressLoad.Value = 100;
+                    progressLoad.Value = 100;
 
                     if (!dfile.HasLoadError)
                     {
                         log("file: " + dfile.fileInfo.Name + " size: " + dfile.fileInfo.Length + " bytes");
-                        parser.getAllElements().ForEach(e => data_list.Items.Add(new ListBoxItem().Content = e));
                     }
                     else
                         log("error: " + dfile.LastErrorMsg);
-                    drawAnalyseTable(parser.DocumentPages);
-                    parser = null;
+                    drawAnalyseTable(_parser.GetCleanDocument());
                 }
             }
         }
@@ -138,8 +185,119 @@ namespace DocLoader
         private void log(string txt)
         {
             ListBoxItem itm = new ListBoxItem();
-            itm.Content = txt;
+            itm.Content = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "  " + txt;
             log_list.Items.Add(itm);
+        }
+
+        private void txt_ignoreWord_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!String.IsNullOrEmpty(txt_ignoreWord.Text.Trim()))
+            {
+                btn_addBlackList.IsEnabled = true;
+                chk_caseSensitive.IsEnabled = true;
+                chk_isRegular.IsEnabled = true;
+                chk_skipWholeLine.IsEnabled = true;
+            }
+            else
+            {
+                btn_addBlackList.IsEnabled = false;
+                chk_caseSensitive.IsEnabled = false;
+                chk_isRegular.IsEnabled = false;
+                chk_skipWholeLine.IsEnabled = false;
+            }
+        }
+
+        private async void btn_addBlackList_Click(object sender, RoutedEventArgs e)
+        {
+            bool isCaseSensitive = false;
+            if (chk_caseSensitive.IsChecked != null)
+            {
+                isCaseSensitive = (bool)chk_caseSensitive.IsChecked;
+            }
+            bool isRegularExpr = false;
+            if (chk_isRegular.IsChecked != null)
+            {
+                isRegularExpr = (bool)chk_isRegular.IsChecked;
+            }
+            bool skipWholeLine = false;
+            if (chk_skipWholeLine.IsChecked != null)
+            {
+                skipWholeLine = (bool)chk_skipWholeLine.IsChecked;
+            }
+
+            await _parser.AddFilterWordAsync(txt_ignoreWord.Text.Trim(), isCaseSensitive, isRegularExpr, skipWholeLine);
+            data_list.Items.Clear();
+            _parser.GetFilterBlackListWords().ForEach(el => data_list.Items.Add(el));
+
+            chk_caseSensitive.IsChecked = false;
+            chk_isRegular.IsChecked = false;
+            chk_skipWholeLine.IsChecked = false;
+            txt_ignoreWord.Text = "";
+        }
+
+        private void data_table_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            try
+            {
+                data_list.SelectedIndex = -1;
+                DataGrid dataGrid = sender as DataGrid;
+                DataGridRow row = (DataGridRow)dataGrid.ItemContainerGenerator.ContainerFromIndex(dataGrid.SelectedIndex);
+                var sunit = dataGrid.CurrentCell;
+                if (sunit.Column != null)
+                {
+                    int? idx = sunit.Column.DisplayIndex;
+                    DataGridCell RowColumn = dataGrid.Columns[(int)idx].GetCellContent(row).Parent as DataGridCell;
+                    string CellValue = ((TextBlock)RowColumn.Content).Text;
+
+                    txt_ignoreWord.Text = CellValue;
+                }
+            }
+            catch (Exception) { }
+        }
+
+        private void data_list_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (data_list.SelectedIndex != -1)
+            {
+                btn_deleteFilterWord.IsEnabled = true;
+            }
+            else
+            {
+                btn_deleteFilterWord.IsEnabled = false;
+
+            }
+        }
+
+        private async void btn_deleteFilterWord_Click(object sender, RoutedEventArgs e)
+        {
+            string val = data_list.SelectedItem.ToString();
+
+            await _parser.DeleteFilterWordAsync(val);
+            data_list.Items.Clear();
+            _parser.GetFilterBlackListWords().ForEach(el => data_list.Items.Add(el));
+        }
+
+        private async void btn_reloadFile_Click(object sender, RoutedEventArgs e)
+        {
+            data_list.Items.Clear();
+
+            progressLoad.Visibility = Visibility.Visible;
+            progressLoad.IsIndeterminate = true;
+
+            _parser = new Parser(dfile = new DataFile(lastFilePath), parserConfig);
+            await _parser.GenerateDocumentAsync();
+            _parser.GetFilterBlackListWords().ForEach(el => data_list.Items.Add(el));
+
+            progressLoad.IsIndeterminate = false;
+            progressLoad.Value = 100;
+            if (!dfile.HasLoadError)
+            {
+                log("file: " + dfile.fileInfo.Name + " size: " + dfile.fileInfo.Length + " bytes");
+            }
+            else
+                log("error: " + dfile.LastErrorMsg);
+            drawAnalyseTable(_parser.GetCleanDocument());
+
         }
     }
 }
