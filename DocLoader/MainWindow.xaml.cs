@@ -50,7 +50,7 @@ namespace DocLoader
         public MainWindow()
         {
             string[] args = Environment.GetCommandLineArgs();
-            //--------------- comand line check mode ----------------------------
+            //--------------- command line check mode ----------------------------
             if (args.Length > 1)
             {
                 InitializeComponent();
