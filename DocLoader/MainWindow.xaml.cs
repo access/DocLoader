@@ -1,4 +1,10 @@
-﻿using System;
+﻿/// ==========================================
+///  Title:     Recognizer for patterns from PDF, Image, Excel, etc. file types;
+///  Author:    Jevgeni Kostenko
+///  Copyright: Baltic Bolt OÜ
+///  Date:      21.09.2020
+/// ==========================================
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -8,13 +14,6 @@ using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Data;
 using RequestRecognitionToolLib.Main;
-/// ==========================================
-///  Title:     Recognizer for patterns from PDF, Image, Excel, etc. file types;
-///  Author:    Jevgeni Kostenko
-///  Copyright: Baltic Bolt OÜ
-///  Date:      21.09.2020
-/// ==========================================
-
 using RequestRecognitionToolLib.Main.classes;
 using RequestRecognitionToolLib.Main.Interfaces;
 using System.Collections.ObjectModel;

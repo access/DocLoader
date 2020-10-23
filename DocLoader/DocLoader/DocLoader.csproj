@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <Reference Include="RequestRecognitionToolLib">
-      <HintPath>..\..\..\..\bin\Debug\netcoreapp3.1\RequestRecognitionToolLib.dll</HintPath>
+      <HintPath>..\..\..\..\ParserTool\RequestRecognitionToolLib\RequestRecognitionToolLib\bin\Debug\netcoreapp3.1\RequestRecognitionToolLib.dll</HintPath>
     </Reference>
   </ItemGroup>
 
