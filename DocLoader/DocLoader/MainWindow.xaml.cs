@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 using System.Windows.Media.Animation;
 using System.Text.RegularExpressions;
 using System.IO;
+using System.Diagnostics;
 
 namespace DocLoader
 {
@@ -35,7 +36,14 @@ namespace DocLoader
         string lastFilePath = "";
         string _cmdInputFile = string.Empty;
         string _cmdOutputFile = string.Empty;
+        string _cmdOutputDictionaryFile = string.Empty;
         string _cmdoutputJSON = string.Empty;
+        string _cmdRemoveItem = string.Empty;
+        string _cmdAddItem = string.Empty;
+
+        bool _cmdIsCaseSensitive = false;
+        bool _cmdIsRegEx = false;
+        bool _cmdIsSkipWholeLine = false;
 
         ParserConfig parserConfig = new ParserConfig()
         {
@@ -44,7 +52,8 @@ namespace DocLoader
             TessDataDir = @"D:\Program Files\Tesseract-OCR\tessdata",
             NativeLibraryDirectory = @"D:\source\repos\ParserTool\RequestRecognitionToolLib\RequestRecognitionToolLib\bin\x64\Debug\netcoreapp3.1\runtimes\win-x64\native",
             GhostscriptDirectory = @"D:\Program Files\gs\gs9.53.2\bin",
-            BlackListDictionaryPath = @"D:\source\repos\ParserTool\RequestRecognitionToolLib\RequestRecognitionToolLib\bin\Debug\netcoreapp3.1\blackListDictionary.json"
+            BlackListDictionaryPath = @"D:\source\repos\ParserTool\RequestRecognitionToolLib\RequestRecognitionToolLib\bin\Debug\netcoreapp3.1\blackListDictionary.json",
+            CleanPercentageOfColumnsCount = 50
         };
 
         public MainWindow()
@@ -57,15 +66,30 @@ namespace DocLoader
                 mainWin.Visibility = Visibility.Hidden;
                 progressLoad.Visibility = Visibility.Hidden;
 
-                //------------------ checking arguments -------------------------
+                //------------------ checking cmd arguments -------------------------
                 for (int i = 0; i < args.Length; i++)
                 {
                     if (args[i].ToUpper() == "-I" || args[i].ToUpper() == "/I" || args[i].ToUpper() == "-INPUTFILE" || args[i].ToUpper() == "--INPUTFILE" || args[i].ToUpper() == "/INPUTFILE")
                         try { _cmdInputFile = args[i + 1]; } catch (Exception) { }
                     if (args[i].ToUpper() == "-O" || args[i].ToUpper() == "/O" || args[i].ToUpper() == "-OUTPUTFILE" || args[i].ToUpper() == "--OUTPUTFILE" || args[i].ToUpper() == "/OUTPUTFILE")
                         try { _cmdOutputFile = args[i + 1]; } catch (Exception) { }
+                    if (args[i].ToUpper() == "-D" || args[i].ToUpper() == "/D" || args[i].ToUpper() == "-DICTIONARY" || args[i].ToUpper() == "--DICTIONARY" || args[i].ToUpper() == "/DICTIONARY")
+                        try { _cmdOutputDictionaryFile = args[i + 1]; } catch (Exception) { }
+                    if (args[i].ToUpper() == "-R" || args[i].ToUpper() == "/R" || args[i].ToUpper() == "-REMOVE" || args[i].ToUpper() == "--REMOVE" || args[i].ToUpper() == "/REMOVE")
+                        try { _cmdRemoveItem = args[i + 1]; } catch (Exception) { }
+                    if (args[i].ToUpper() == "-ADD" || args[i].ToUpper() == "/ADD" || args[i].ToUpper() == "--ADD")
+                        try { _cmdAddItem = args[i + 1]; } catch (Exception) { }
+                    if (args[i].ToUpper() == "-ISCASESENS" || args[i].ToUpper() == "/ISCASESENS" || args[i].ToUpper() == "--ISCASESENS")
+                        try { _cmdIsCaseSensitive = args[i + 1] == "true" ? true : false; } catch (Exception) { }
+                    if (args[i].ToUpper() == "-ISREGEX" || args[i].ToUpper() == "/ISREGEX" || args[i].ToUpper() == "--ISREGEX")
+                        try { _cmdIsRegEx = args[i + 1] == "true" ? true : false; } catch (Exception) { }
+                    if (args[i].ToUpper() == "-ISSKIPLINE" || args[i].ToUpper() == "/ISSKIPLINE" || args[i].ToUpper() == "--ISSKIPLINE")
+                        try { _cmdIsSkipWholeLine = args[i + 1] == "true" ? true : false; } catch (Exception) { }
                 }
-                if (String.IsNullOrEmpty(_cmdInputFile) || String.IsNullOrEmpty(_cmdOutputFile)) Application.Current.Shutdown();
+                if (!String.IsNullOrEmpty(_cmdOutputDictionaryFile)) GenerateDictionary();
+                if (!String.IsNullOrEmpty(_cmdRemoveItem)) deleteFilterWord(_cmdRemoveItem);
+                if (!String.IsNullOrEmpty(_cmdAddItem)) addFilterWord(_cmdAddItem, _cmdIsCaseSensitive, _cmdIsRegEx, _cmdIsSkipWholeLine);
+                if (String.IsNullOrEmpty(_cmdInputFile) || String.IsNullOrEmpty(_cmdOutputFile)) Process.GetCurrentProcess().Kill();
                 //------------------ checking OK ---------------------------------
                 GenerateDocumentJSON();
             }
@@ -77,13 +101,36 @@ namespace DocLoader
             }
         }
 
+        private void addFilterWord(string itemVal, bool IsCaseSensitive, bool IsRegularExpression, bool SkipWholeLine)
+        {
+            byte[] data = System.Convert.FromBase64String(itemVal);
+            string base64Decoded = System.Text.UTF8Encoding.UTF8.GetString(data);
+
+            _parser = new Parser(parserConfig);
+            _parser.AddFilterWord(base64Decoded, IsCaseSensitive, IsRegularExpression, SkipWholeLine);
+            Process.GetCurrentProcess().Kill();
+        }
+
+        private void deleteFilterWord(string itemVal)
+        {
+            _parser = new Parser(parserConfig);
+            _parser.DeleteFilterWord(itemVal);
+            Process.GetCurrentProcess().Kill();
+        }
+
+        private void GenerateDictionary()
+        {
+            File.WriteAllText(_cmdOutputDictionaryFile, File.ReadAllText(parserConfig.BlackListDictionaryPath));
+            Process.GetCurrentProcess().Kill();
+        }
+
         private async void GenerateDocumentJSON()
         {
             _parser = new Parser(dfile = new DataFile(_cmdInputFile), parserConfig);
             await _parser.GenerateDocumentAsync();
             _cmdoutputJSON = _parser.DocumentJSON;
             try { File.WriteAllText(_cmdOutputFile, _cmdoutputJSON); } catch (Exception) { }
-            Application.Current.Shutdown();
+            Process.GetCurrentProcess().Kill();
         }
 
         private void drawAnalyseTable(IDocument doc)
