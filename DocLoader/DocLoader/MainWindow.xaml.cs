@@ -128,7 +128,7 @@ namespace DocLoader
         {
             _parser = new Parser(dfile = new DataFile(_cmdInputFile), parserConfig);
             await _parser.GenerateDocumentAsync();
-            _cmdoutputJSON = _parser.DocumentJSON;
+            _cmdoutputJSON = _parser.CleanDocumentJSON;
             try { File.WriteAllText(_cmdOutputFile, _cmdoutputJSON); } catch (Exception) { }
             Process.GetCurrentProcess().Kill();
         }
@@ -182,6 +182,7 @@ namespace DocLoader
                 else
                     log("error: " + dfile.LastErrorMsg);
                 drawAnalyseTable(_parser.GetCleanDocument());
+                Debug.WriteLine(_parser.CleanDocumentJSON);
             }
 
         }
